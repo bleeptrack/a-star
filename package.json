@@ -1,0 +1,16 @@
+{
+  "name": "starlantern",
+  "version": "1.0.0",
+  "description": "",
+  "main": "BabylonRender.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@babylonjs/core": "^6.32.1",
+    "paper": "^0.12.17",
+    "paperjs-offset": "^1.0.8"
+  }
+}
