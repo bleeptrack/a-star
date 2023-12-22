@@ -105,7 +105,7 @@ export class BabylonRender extends HTMLElement {
 				
 				button{
 					color: lightyellow;
-					background: #33334C; /* Green background */
+					background-color: #33334C;
 					font-size: 5em !important;
 					margin: 0 auto;
 					border-radius: 0.2em;
@@ -116,7 +116,7 @@ export class BabylonRender extends HTMLElement {
 				}
 				button:hover {
 					box-shadow: 8px 8px lightyellow;
-					transform: translateY(2px) !important;
+					transform: translateY(2px);
 					transition: all ease-in 0.2s;
 					opacity: 1 !important;
 				}
@@ -125,11 +125,60 @@ export class BabylonRender extends HTMLElement {
 					transform: translateY(4px) !important;
 					transition: all ease-in 0.05s;
 					opacity: 1 !important;
+					
 				}	
+				button:disabled{
+					border: none;
+					box-shadow: none;
+					background-color: transparent;
+					opacity: 1 !important;
+					animation: animationFrames 10s ease 0s 10 normal forwards running !important;
+					transform-origin: 50% 50%;
+				}
+
+				@keyframes animationFrames {
+					0% {
+						transform: translate(0px, 6px) rotate(0deg);
+					}
+					100% {
+						transform: translate(0px, 6px) rotate(360deg);
+					}
+				}
 				
 				#flex{
 					display: flex;
 					justify-content: center;
+					position: relative;
+				}
+				#mini-settings{
+					position: absolute;
+					top: 0;
+					left: 0;
+					font-family: sans-serif;
+				}
+				
+				input[type="checkbox"]{
+					-webkit-appearance: none;
+					appearance: none;
+					margin: 0;
+					border: 0.2em solid lightyellow;
+					height: 1.2em;
+					width: 1.2em;
+					display: inline-grid;
+					place-content: center;
+				}
+				
+				input[type="checkbox"]::before {
+					content: "";
+					width: 0.65em;
+					height: 0.65em;
+					transform: scale(0);
+					transition: 120ms transform ease-in-out;
+					box-shadow: inset 1em 1em lightyellow;
+				}
+
+				input[type="checkbox"]:checked::before {
+					transform: scale(1);
 				}
 			</style>
 			<canvas id="renderCanvas" touch-action="none"></canvas>
@@ -143,6 +192,10 @@ export class BabylonRender extends HTMLElement {
 				<label class="material-symbols-outlined" for="starNr">star</label>
 				<input type="range" min="5" max="13" value="${this.nr}" class="slider" id="starNr" name="starNr"><br>
 				<div id="flex">
+					<div id="mini-settings">
+						<input type="checkbox" id="autorefresh" name="autorefresh" checked>
+						<label for="autorefresh">auto reload</label>
+					</div>
 				<button class="material-symbols-outlined" id="reload">autorenew</button>
 				</div>
 				
@@ -152,6 +205,11 @@ export class BabylonRender extends HTMLElement {
 
 		this.shadow.appendChild(container.content.cloneNode(true));
 		
+		
+	}
+	
+	sleep() { 
+		return new Promise(r => setTimeout(r));
 	}
 	
 	setTexture(pattern){
@@ -244,12 +302,29 @@ export class BabylonRender extends HTMLElement {
 			//starRoot.parent = this.star
 			pat.parent = this.patternComplete
 		}
+		
+		this.enableUI()
 	}
 	
+	disableUI(){
+		this.shadow.getElementById("reload").disabled = true
+		this.shadow.getElementById("starHeight").disabled = true
+		this.shadow.getElementById("starRatio").disabled = true
+		this.shadow.getElementById("widthRatio").disabled = true
+		this.shadow.getElementById("starNr").disabled = true
+	}
 
+	enableUI(){
+		this.shadow.getElementById("starHeight").removeAttribute("disabled")
+		this.shadow.getElementById("starRatio").removeAttribute("disabled")
+		this.shadow.getElementById("widthRatio").removeAttribute("disabled")
+		this.shadow.getElementById("starNr").removeAttribute("disabled")
+		this.shadow.getElementById("reload").removeAttribute("disabled")
+	}
 
 	// fires after the element has been attached to the DOM
 	connectedCallback() {
+		console.log("babylon connected")
 		//this.shuffleSettings()
 		const canvas = this.shadow.getElementById("renderCanvas"); // Get the canvas element
 		const engine = new Engine(canvas, true); // Generate the BABYLON 3D engine
@@ -277,30 +352,39 @@ export class BabylonRender extends HTMLElement {
 			this.l = heightSlider.value/10
 			this.r = ratioSlider.value/100 * this.l
 			//this.h = ratioSlider.value/100 * this.r
-			this.createStarMesh()
+			if(this.shadow.getElementById("autorefresh").checked){
+				this.createStarMesh()
+			}
 		})
 		
 		
 		ratioSlider.addEventListener("change", () => {
 			this.r = ratioSlider.value/100 * this.l
 			//this.h = ratioSlider.value/100 * this.r
-			this.createStarMesh()
+			if(this.shadow.getElementById("autorefresh").checked){
+				this.createStarMesh()
+			}
 		})
 		
 		widthSlider.addEventListener("change", () => {
 			//this.h = widthSlider.value/100 * this.r
 			this.h = widthSlider.value/10
-			this.createStarMesh()
+			if(this.shadow.getElementById("autorefresh").checked){
+				this.createStarMesh()
+			}
 		})
 		
 		nrSlider.addEventListener("change", () => {
 			this.nr = nrSlider.value
-			this.createStarMesh()
+			if(this.shadow.getElementById("autorefresh").checked){
+				this.createStarMesh()
+			}
 		})
 		
 		let reload = this.shadow.getElementById("reload")
 		reload.addEventListener("click", () => {
 			this.createStarMesh()
+			
 		})
 		
 		/*
@@ -311,7 +395,8 @@ export class BabylonRender extends HTMLElement {
 		*/
 		
 		
-		this.createStarMesh()
+		//this.createStarMesh()
+		
 	}
 	
 	get2DTriangle(pos, norm){
@@ -346,6 +431,9 @@ export class BabylonRender extends HTMLElement {
 	
 	createStarMesh(){
 		//this.shuffleSettings()
+		this.disableUI()
+		
+		
 		
 		if(this.customMesh){
 			this.customMesh.dispose()
@@ -401,7 +489,12 @@ export class BabylonRender extends HTMLElement {
 			starRoot.parent = this.star
 		}
 		
-		this.dispatchEvent(new CustomEvent("Mesh created", { data: "heyo" }));
+
+		
+		this.dispatchEvent(new CustomEvent("Mesh created", {
+			bubbles: true,
+			cancelable: false,
+		}));
 	}
 	
 	shuffleSettings(){
@@ -454,6 +547,30 @@ export class BabylonRender extends HTMLElement {
 			blurKernelSize: 64,
 		});
 		gl.intensity = 0.7
+		
+		camera.useAutoRotationBehavior = true;
+		
+		/*
+		this.scene.registerBeforeRender( () => {
+			camera.alpha += 0.01
+		})
+		
+		scene.onPointerObservable.add((pointerInfo) => {
+			switch (pointerInfo.type) {
+				case BABYLON.PointerEventTypes.POINTERDOWN:
+				console.log("POINTER DOWN");
+				break;
+				case BABYLON.PointerEventTypes.POINTERUP:
+				console.log("POINTER UP");
+				this.scene.registerBeforeRender( () => {
+					camera.alpha += 0.01
+				})
+				break;
+			}
+		});
+		
+		*/
+		
 
 		return this.scene;
 	};

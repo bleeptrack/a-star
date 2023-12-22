@@ -83,12 +83,15 @@ export class Communicator extends HTMLElement {
 	// fires after the element has been attached to the DOM
 	connectedCallback() {
 		this.babylonBox.addEventListener("Mesh created", () => {
-			let texture = this.paperBox.renderTriangle(this.babylonBox.points)
-			this.babylonBox.setTexture(texture)
+			console.log("done!")
+			
+			this.paperBox.renderTriangle(this.babylonBox.points).then( texture => {
+				this.babylonBox.setTexture(texture)
+			}) 
+			
 		})
 		
-		let texture = this.paperBox.renderTriangle(this.babylonBox.points)
-		this.babylonBox.setTexture(texture)
+		this.babylonBox.createStarMesh()
 	}
 	
 	

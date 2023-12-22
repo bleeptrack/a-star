@@ -79,7 +79,11 @@ export class PaperRender extends HTMLElement {
 		
 	}
 	
-	renderTriangle(points){
+	sleep() { 
+		return new Promise(r => setTimeout(r));
+	}
+	
+	async renderTriangle(points){
 		
 		project.activeLayer.removeChildren();
 		
@@ -88,8 +92,8 @@ export class PaperRender extends HTMLElement {
 		triangle.add(points[2])
 		triangle.add(points[0])
 		triangle.add([points[2].x, -points[2].y])
-		triangle.strokeWidth = 3
-		triangle.strokeColor = "black"
+		//triangle.strokeWidth = 3
+		//triangle.strokeColor = "black"
 		triangle.strokeJoin = 'round'
 		triangle.closed = true
 		triangle.scale(200)
@@ -111,17 +115,14 @@ export class PaperRender extends HTMLElement {
 		innerTriC.remove()
 		
 		
+		let smallLines = await this.addSmallLines(triangle)
 		
-		let smallLines = this.addSmallLines(triangle)
-		smallLines.fillColor = 'green'
-		
-		let pattern = this.addBigLine(triangle, smallLines)
+		let pattern = await this.addBigLine(triangle, smallLines)
 		
 		pattern.children = pattern.children.filter(
 			(entry) => this.countContains(pattern, entry) <= 1
 		)
   
-		
 		
 		let tex = pattern.clone()
 		tex.fillColor = 'black'
@@ -131,16 +132,16 @@ export class PaperRender extends HTMLElement {
 		let texW = tex.bounds.width
 		let texH = tex.bounds.height
 		tex.remove()
-		
-		
+
 		
 		let p1 = this.unite(f1, pattern.clone())
 		pattern.rotate(angle, c1.firstSegment.point)
-		let p2 = this.combineAll([f2,f3,pattern,p1])
+		let p2 = await this.combineAll([f2,f3,pattern,p1])
 		p2.strokeWidth = 1
 		p2.strokeColor = 'black'
 		p2.fillColor = null
 		c1.remove()
+
 		
 		let l1 = Path.Line(triangle.segments[0].point, triangle.segments[2].point)
 		let l2 = Path.Line(c1.segments[0].point, c1.segments[2].point)
@@ -161,8 +162,6 @@ export class PaperRender extends HTMLElement {
 		
 		for(let elem of project.activeLayer.children){
 			if(elem._class != "Group"){
-				//elem.remove()
-				elem.strokeColor = "red"
 				elem.remove()
 			}
 		}
@@ -171,7 +170,7 @@ export class PaperRender extends HTMLElement {
 		this.group.fillColor = 'black'
 		
 		//this.downloadSVG()
-		
+
 		
 		return {data: this.texture, width: texW, height:texH}
 	}
@@ -188,18 +187,16 @@ export class PaperRender extends HTMLElement {
 		return count;
 	}	
 	
-	addBigLine(tri, smallLines){
+	async addBigLine(tri, smallLines){
 		let baseline = new Path.Line(tri.segments[0].point, tri.segments[2].point)
 		let lngth = baseline.length
 		let offs = (0.2 + Math.random()*0.6)
 		let startPoint = baseline.getPointAt( offs * lngth )
 		let line = new Path.Line(startPoint, startPoint.add([lngth, 0]))
 		line.rotate(-90 + (offs-0.5)*180, line.firstSegment.point)
-		line.strokeColor = 'green'
 		
 		
 		let swirl = new Path()
-		swirl.strokeColor = "red"
 		swirl.add(line.firstSegment.point)
 		swirl.add(new Point(tri.bounds.topLeft.x + Math.random()*tri.bounds.width, tri.bounds.topLeft.y + Math.random()*tri.bounds.height/2))
 		swirl.add(new Point(tri.bounds.topLeft.x + Math.random()*tri.bounds.width, tri.bounds.topLeft.y + Math.random()*tri.bounds.height/2))
@@ -207,32 +204,26 @@ export class PaperRender extends HTMLElement {
 		swirl.smooth()
 		
 		let outer = PaperOffset.offsetStroke(swirl, 15)
-		outer.fillColor = "purple"
 		let outer2 = outer.clone()
 		outer2.scale(1,-1, swirl.firstSegment.point)
 		let c = new Path.Circle(swirl.firstSegment.point, 15)
-		let fo = this.combineAll([outer, outer2, c])
-		fo.fillColor = 'green'
+		let fo = await this.combineAll([outer, outer2, c])
 		let finalOuter = this.intersect(fo, tri)
 		
 		
 		let inner = PaperOffset.offsetStroke(swirl, 5)
-		inner.fillColor = "purple"
 		let inner2 = inner.clone()
 		inner2.scale(1,-1, swirl.firstSegment.point)
 		let c2 = new Path.Circle(swirl.firstSegment.point, 5)
-		let finalInner = this.combineAll([inner, inner2, c2])
-		finalInner.fillColor = 'purple'
+		let finalInner = await this.combineAll([inner, inner2, c2])
 		
 		
 		let f = this.unite(smallLines, finalOuter)
 
 		let f2 = this.subtract(f,finalInner)
-		f2.fillColor = 'red'
 		
 		let innerBorder = PaperOffset.offset(tri, -this.glueFoldWidth, { cap: 'round' })
 		let border = new CompoundPath({children: [tri,innerBorder]})
-		border.fillColor = "blue"
 		
 		let f3 = this.unite(f2,border)
 		
@@ -264,7 +255,7 @@ export class PaperRender extends HTMLElement {
 		return c
 	}
 	
-	addSmallLines(tri){
+	async addSmallLines(tri){
 		let lines1 = []
 		let lines2 = []
 		let finalLines = []
@@ -274,7 +265,6 @@ export class PaperRender extends HTMLElement {
 		for(let i = 0; i< lngth; i+=dist){
 			if(Math.random() < 0.5){
 				let line1 = new Path.Line(tri.segments[0].point, tri.segments[1].point)
-				line1.strokeColor = "green"
 				line1.scale(2)
 				line1.position = baseline.getPointAt(i)
 				lines1.push(line1)
@@ -284,7 +274,6 @@ export class PaperRender extends HTMLElement {
 		for(let i = 0; i< lngth; i+=dist){
 			if(Math.random() < 0.5){
 				let line2 = new Path.Line(tri.segments[1].point, tri.segments[2].point)
-				line2.strokeColor = "red"
 				line2.scale(2)
 				line2.position = baseline.getPointAt(i)
 				lines2.push(line2)
@@ -329,14 +318,14 @@ export class PaperRender extends HTMLElement {
 				finalOffsetLines.push( new Path.Circle( l.firstSegment.point, 2) )
 				finalOffsetLines.push( new Path.Circle( l.lastSegment.point, 2) )
 				l.remove()
+				
 			}
 		})
 		
 		lines1.forEach(l => l.remove())
 		lines2.forEach(l => l.remove())
 		
-		let combi = this.combineAll(finalOffsetLines)
-		combi.fillColor = 'blue'
+		let combi = await this.combineAll(finalOffsetLines)
 		let sideTri = new Path()
 		sideTri.add(tri.segments[0].point)
 		sideTri.add(tri.segments[1].point)
@@ -344,7 +333,6 @@ export class PaperRender extends HTMLElement {
 		
 		let smallLines1 = sideTri.intersect(combi)
 		combi.remove()
-		smallLines1.fillColor = 'green'
 		let smallLines2 = smallLines1.clone()
 		smallLines2.bounds.topCenter = smallLines1.bounds.bottomCenter
 		smallLines2.scale(1,-1)
@@ -352,17 +340,19 @@ export class PaperRender extends HTMLElement {
 		let fin = smallLines1.unite(smallLines2)
 		smallLines1.remove()
 		smallLines2.remove()
+		
 		return fin
 
 	}
 	
-	combineAll(arr){
+	async combineAll(arr){
 		let shape = new Path()
 		for(let s of arr){
 			let newshape = shape.unite(s)
 			s.remove()
 			shape.remove()
 			shape = newshape
+			await this.sleep()
 		}
 		return shape
 	}
