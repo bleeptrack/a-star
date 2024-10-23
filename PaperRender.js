@@ -67,6 +67,7 @@ export class PaperRender extends HTMLElement {
 			<div id="settings">
 				<div id="wrap">
 				<button class="material-symbols-outlined" id="download-cut">cut</button>
+				<button class="material-symbols-outlined" id="download-outline">fullscreen</button>
 				<button class="material-symbols-outlined" id="download-print">print</button>
 				</div>
 			</div>
@@ -142,6 +143,18 @@ export class PaperRender extends HTMLElement {
 		p2.fillColor = null
 		c1.remove()
 
+		let o1 = Path.Line(triangle.segments[1].point, triangle.segments[2].point)
+		let o2 = Path.Line(c1.segments[2].point, c1.segments[3].point)
+		let o3 = Path.Line(c1.segments[1].point, c1.segments[2].point)
+		let o4 = Path.Line(c1.segments[0].point, c1.segments[1].point)
+		let o5 = Path.Line(triangle.segments[0].point, triangle.segments[3].point)
+		let o6 = Path.Line(triangle.segments[2].point, triangle.segments[3].point)
+		
+		// o1.strokeColor = 'blue'
+		o2.style = o3.style = o4.style = o5.style = o6.style = o1.style 
+		this.outline = new Group([ o1, o2, o3, o4, o5, o6])
+		this.outline.position = paper.view.center
+
 		
 		let l1 = Path.Line(triangle.segments[0].point, triangle.segments[2].point)
 		let l2 = Path.Line(c1.segments[0].point, c1.segments[2].point)
@@ -165,7 +178,7 @@ export class PaperRender extends HTMLElement {
 				elem.remove()
 			}
 		}
-		project.activeLayer.children = [this.group]
+		project.activeLayer.children = [this.group, this.outline]
 		
 		this.group.fillColor = 'black'
 		
@@ -386,6 +399,11 @@ export class PaperRender extends HTMLElement {
 		btnCut.addEventListener("click", () => {
 			this.transformToCut()
 		})
+
+		let btnOutline = this.shadow.getElementById("download-outline")
+		btnOutline.addEventListener("click", () => {
+			this.transformToOutline()
+		})
 		
 		let btnPrint = this.shadow.getElementById("download-print")
 		btnPrint.addEventListener("click", () => {
@@ -403,6 +421,16 @@ export class PaperRender extends HTMLElement {
 		this.group.fillColor = null
 		this.downloadSVG()
 		this.group.fillColor = 'black'
+	}
+
+	transformToOutline(){
+		this.outline.strokeColor = 'blue'
+		let children = project.activeLayer.removeChildren()
+		project.activeLayer.children = [children[1]]
+		this.downloadSVG()
+		project.activeLayer.removeChildren()
+		project.activeLayer.setChildren(children)
+		this.outline.strokeColor = null
 	}
 	
 	downloadSVG(){
