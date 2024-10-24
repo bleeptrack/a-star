@@ -60,27 +60,14 @@ export class PaperRender extends HTMLElement {
 				
 				#wrap{
 					align-self: center;
-					position: relative;
 				}
-				:popover-open {
-					background: lightyellow;
-					border: none;
-					width: 40%;
-					display: flex;
-					flex-direction: column;
-					font-size: 0.65vh;
-					margin: 0;
-				}
+				
 
 				
 			</style>
 			<canvas id="paperCanvas" width="50%"></canvas>
 			<div id="settings">
 				<div id="wrap">
-				<div id="popover" popover>
-					<button id="popover-double">Full Cover</button>
-					<button id="popover-single">Single Window</button>
-				</div>
 				<button class="material-symbols-outlined" id="download-cut" title="Lasercutter/Plotter Export">cut</button>
 				<button class="material-symbols-outlined" id="download-outline" popovertarget="popover" title="Tracing Paper Export">fullscreen</button>
 				<button class="material-symbols-outlined" id="download-print" title="Print Export">print</button>
@@ -416,20 +403,8 @@ export class PaperRender extends HTMLElement {
 			this.transformToCut()
 		})
 
-		let btnOutline = this.shadow.getElementById("download-outline")
-		let popover = this.shadow.getElementById("popover")
-		popover.style.position = 'fixed';
-		var rect=btnOutline.getBoundingClientRect();
-		popover.style.left = rect.left + 'px';
-		popover.style.top = rect.top + 'px';
-		
-		this.shadow.getElementById("popover-double").addEventListener("click", () => {
+		this.shadow.getElementById("download-outline").addEventListener("click", () => {
 			this.transformToOutline('double')
-			popover.hidePopover()
-		})
-		this.shadow.getElementById("popover-single").addEventListener("click", () => {
-			this.transformToOutline('single')
-			popover.hidePopover()
 		})
 		
 		
