@@ -60,15 +60,30 @@ export class PaperRender extends HTMLElement {
 				
 				#wrap{
 					align-self: center;
+					position: relative;
 				}
+				:popover-open {
+					background: lightyellow;
+					border: none;
+					width: 40%;
+					display: flex;
+					flex-direction: column;
+					font-size: 0.65vh;
+					margin: 0;
+				}
+
 				
 			</style>
 			<canvas id="paperCanvas" width="50%"></canvas>
 			<div id="settings">
 				<div id="wrap">
-				<button class="material-symbols-outlined" id="download-cut">cut</button>
-				<button class="material-symbols-outlined" id="download-outline">fullscreen</button>
-				<button class="material-symbols-outlined" id="download-print">print</button>
+				<div id="popover" popover>
+					<button id="popover-double">Full Cover</button>
+					<button id="popover-single">Single Window</button>
+				</div>
+				<button class="material-symbols-outlined" id="download-cut" title="Lasercutter/Plotter Export">cut</button>
+				<button class="material-symbols-outlined" id="download-outline" popovertarget="popover" title="Tracing Paper Export">fullscreen</button>
+				<button class="material-symbols-outlined" id="download-print" title="Print Export">print</button>
 				</div>
 			</div>
 		`;
@@ -142,19 +157,6 @@ export class PaperRender extends HTMLElement {
 		p2.strokeColor = 'black'
 		p2.fillColor = null
 		c1.remove()
-
-		let o1 = Path.Line(triangle.segments[1].point, triangle.segments[2].point)
-		let o2 = Path.Line(c1.segments[2].point, c1.segments[3].point)
-		let o3 = Path.Line(c1.segments[1].point, c1.segments[2].point)
-		let o4 = Path.Line(c1.segments[0].point, c1.segments[1].point)
-		let o5 = Path.Line(triangle.segments[0].point, triangle.segments[3].point)
-		let o6 = Path.Line(triangle.segments[2].point, triangle.segments[3].point)
-		
-		// o1.strokeColor = 'blue'
-		o2.style = o3.style = o4.style = o5.style = o6.style = o1.style 
-		this.outline = new Group([ o1, o2, o3, o4, o5, o6])
-		this.outline.position = paper.view.center
-
 		
 		let l1 = Path.Line(triangle.segments[0].point, triangle.segments[2].point)
 		let l2 = Path.Line(c1.segments[0].point, c1.segments[2].point)
@@ -165,9 +167,23 @@ export class PaperRender extends HTMLElement {
 		l1.strokeColor = 'grey'
 		l2.style = l3.style = l4.style = l5.style = l6.style = l1.style 
 		
-		let tracingPaper = PaperOffset.offset(triangle, -this.glueFoldWidth/3, { cap: 'round' })
-		tracingPaper.strokeColor = 'red'
-		tracingPaper.strokeWidth = 1
+		this.tracingPaperSingle = PaperOffset.offset(triangle, -this.glueFoldWidth/3, { cap: 'round' })
+		this.tracingPaperSingle.strokeColor = 'red'
+		this.tracingPaperSingle.strokeWidth = 1
+
+		this.tracingPaperDouble = new Path([
+			triangle.segments[0].point,
+			triangle.segments[3].point,
+			triangle.segments[2].point,
+			triangle.segments[1].point,
+			c1.segments[2].point,
+			c1.segments[1].point,
+			c1.segments[0].point,
+			triangle.segments[0].point
+		])
+		this.tracingPaperDouble.strokeColor = 'blue'
+		this.tracingPaperDouble.strokeWidth = 1
+		this.tracingPaperDouble.closed = true
 		
 		//this.group = new Group([p2, l1, l2, l3, l4, l5, l6, tracingPaper])
 		this.group = new Group([p2, l1, l2, l3, l4, l5, l6])
@@ -178,7 +194,7 @@ export class PaperRender extends HTMLElement {
 				elem.remove()
 			}
 		}
-		project.activeLayer.children = [this.group, this.outline]
+		project.activeLayer.children = [this.group]
 		
 		this.group.fillColor = 'black'
 		
@@ -401,9 +417,21 @@ export class PaperRender extends HTMLElement {
 		})
 
 		let btnOutline = this.shadow.getElementById("download-outline")
-		btnOutline.addEventListener("click", () => {
-			this.transformToOutline()
+		let popover = this.shadow.getElementById("popover")
+		popover.style.position = 'fixed';
+		var rect=btnOutline.getBoundingClientRect();
+		popover.style.left = rect.left + 'px';
+		popover.style.top = rect.top + 'px';
+		
+		this.shadow.getElementById("popover-double").addEventListener("click", () => {
+			this.transformToOutline('double')
+			popover.hidePopover()
 		})
+		this.shadow.getElementById("popover-single").addEventListener("click", () => {
+			this.transformToOutline('single')
+			popover.hidePopover()
+		})
+		
 		
 		let btnPrint = this.shadow.getElementById("download-print")
 		btnPrint.addEventListener("click", () => {
@@ -423,14 +451,13 @@ export class PaperRender extends HTMLElement {
 		this.group.fillColor = 'black'
 	}
 
-	transformToOutline(){
-		this.outline.strokeColor = 'blue'
-		let children = project.activeLayer.removeChildren()
-		project.activeLayer.children = [children[1]]
+	transformToOutline(type='double'){
+		let tracingPaper = type==='double'? this.tracingPaperDouble : this.tracingPaperSingle
+		tracingPaper.insertAbove(this.group)
+		this.group.remove()
 		this.downloadSVG()
-		project.activeLayer.removeChildren()
-		project.activeLayer.setChildren(children)
-		this.outline.strokeColor = null
+		this.group.insertAbove(tracingPaper)
+		tracingPaper.remove()
 	}
 	
 	downloadSVG(){
